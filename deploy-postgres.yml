@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  selector:
+   matchLabels:
+    app: postgres
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          imagePullPolicy: "IfNotPresent"
+          env:
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-creds
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: postgres-creds
+                key: POSTGRES_USER
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: postgres-creds
+                key: POSTGRES_DB
+          - name: PGDATA
+            valueFrom:
+              configMapKeyRef:
+                name: postgres-env-vars
+                key: PGDATA
+          ports:
+          - containerPort: 5432
+            name: postgres
+
+---
+apiVersion: v1
+data:
+  PGDATA: /var/lib/postgres
+kind: ConfigMap
+metadata:
+  name: postgres-env-vars
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-creds
+type: Opaque
+data:
+  POSTGRES_DB: cG9zdGdyZXM=
+  POSTGRES_PASSWORD: cG9zdGdyZXM=
+  POSTGRES_USER: dGVzdHVzZXI=
+---
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: postgres
+      labels:
+        app: postgres
+    spec:
+       ports:
+        - name: postgres
+          targetPort: 5432
+          port: 5432
+       type: ClusterIP
+       selector:
+        app: postgres
+    # spec:
+    #    ports:
+    #     - name: postgres
+    #       port: 5432          
+    #    type: ClusterIP
+    #    selector:
+    #     app: postgres
+
